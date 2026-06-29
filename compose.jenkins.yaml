@@ -1,0 +1,46 @@
+name: proofchain-ci
+
+services:
+  jenkins-docker:
+    image: docker:dind
+    container_name: proofchain-jenkins-docker
+    privileged: true
+    restart: unless-stopped
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - jenkins_docker_certs:/certs/client
+      - jenkins_data:/var/jenkins_home
+    networks:
+      proofchain_jenkins:
+        aliases:
+          - docker
+    command: --storage-driver overlay2
+
+  jenkins:
+    build:
+      context: ./infrastructure/jenkins
+    container_name: proofchain-jenkins
+    restart: unless-stopped
+    depends_on:
+      - jenkins-docker
+    environment:
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_CERT_PATH: /certs/client
+      DOCKER_TLS_VERIFY: "1"
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - jenkins_docker_certs:/certs/client:ro
+    networks:
+      - proofchain_jenkins
+
+volumes:
+  jenkins_data:
+  jenkins_docker_certs:
+
+networks:
+  proofchain_jenkins:
+    name: proofchain-jenkins-network

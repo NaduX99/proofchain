@@ -1,22 +1,49 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import {
+  DocumentBuilder,
+  SwaggerModule,
+} from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  // Every backend route will begin with /api
   app.setGlobalPrefix('api');
 
-  // Allows the Next.js frontend to call this backend
   app.enableCors({
     origin: 'http://localhost:3000',
     credentials: true,
   });
 
-  // Backend will run on port 4000
-  await app.listen(4000);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
-  console.log('ProofChain API running at http://localhost:4000/api');
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('ProofChain API')
+    .setDescription(
+      'Digital evidence integrity and chain-of-custody API',
+    )
+    .setVersion('1.0')
+    .build();
+
+  const document = SwaggerModule.createDocument(
+    app,
+    swaggerConfig,
+  );
+
+  SwaggerModule.setup('api/docs', app, document);
+
+  await app.listen(process.env.API_PORT ?? 4000);
+
+  console.log(
+    'ProofChain API running at http://localhost:4000/api',
+  );
 }
 
 void bootstrap();

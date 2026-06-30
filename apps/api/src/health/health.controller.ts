@@ -4,10 +4,12 @@ import type { HealthResult } from './health.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  constructor(
+    private readonly healthService: HealthService,
+  ) { }
 
   @Get()
-  checkHealth(): HealthResult {
+  checkHealth(): Promise<HealthResult> {
     return this.healthService.check();
   }
 }

@@ -1,20 +1,38 @@
 import {
     Injectable,
+    Logger,
     OnModuleDestroy,
     OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Pool } from 'pg';
 
 @Injectable()
 export class DatabaseService
     implements OnModuleInit, OnModuleDestroy {
-    private readonly pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-    });
+    private readonly logger = new Logger(DatabaseService.name);
+    private readonly pool: Pool;
+
+    constructor(private readonly configService: ConfigService) {
+        const databaseUrl =
+            this.configService.get<string>('DATABASE_URL');
+
+        if (!databaseUrl) {
+            throw new Error('DATABASE_URL is not configured');
+        }
+
+        this.pool = new Pool({
+            connectionString: databaseUrl,
+        });
+    }
 
     async onModuleInit(): Promise<void> {
-        await this.pool.query('SELECT 1');
-        console.log('PostgreSQL connected');
+        try {
+            await this.pool.query('SELECT 1');
+            this.logger.log('PostgreSQL connected successfully');
+        } catch (error) {
+            this.logger.error('PostgreSQL connection failed', error);
+        }
     }
 
     async checkConnection(): Promise<boolean> {
@@ -24,14 +42,6 @@ export class DatabaseService
         } catch {
             return false;
         }
-    }
-
-    async query<T>(
-        text: string,
-        values: unknown[] = [],
-    ): Promise<T[]> {
-        const result = await this.pool.query<T>(text, values);
-        return result.rows;
     }
 
     async onModuleDestroy(): Promise<void> {

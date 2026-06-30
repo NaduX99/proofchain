@@ -15,30 +15,22 @@ export class HealthService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly storageService: StorageService,
-  ) { }
+  ) {}
 
   async check(): Promise<HealthResult> {
-    const [databaseConnected, storageConnected] =
-      await Promise.all([
-        this.databaseService.checkConnection(),
-        this.storageService.checkConnection(),
-      ]);
+    const [databaseConnected, storageConnected] = await Promise.all([
+      this.databaseService.checkConnection(),
+      this.storageService.checkConnection(),
+    ]);
 
     return {
-      status:
-        databaseConnected && storageConnected
-          ? 'healthy'
-          : 'unhealthy',
+      status: databaseConnected && storageConnected ? 'healthy' : 'unhealthy',
 
       api: 'running',
 
-      database: databaseConnected
-        ? 'connected'
-        : 'disconnected',
+      database: databaseConnected ? 'connected' : 'disconnected',
 
-      storage: storageConnected
-        ? 'available'
-        : 'unavailable',
+      storage: storageConnected ? 'available' : 'unavailable',
 
       timestamp: new Date().toISOString(),
     };

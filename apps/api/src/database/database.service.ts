@@ -1,50 +1,53 @@
 import {
-    Injectable,
-    Logger,
-    OnModuleDestroy,
-    OnModuleInit,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Pool } from 'pg';
+import type { QueryResult, QueryResultRow } from 'pg';
 
 @Injectable()
-export class DatabaseService
-    implements OnModuleInit, OnModuleDestroy {
-    private readonly logger = new Logger(DatabaseService.name);
-    private readonly pool: Pool;
+export class DatabaseService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(DatabaseService.name);
+  private readonly pool: Pool;
 
-    constructor(private readonly configService: ConfigService) {
-        const databaseUrl =
-            this.configService.get<string>('DATABASE_URL');
+  constructor(private readonly configService: ConfigService) {
+    const databaseUrl = this.configService.get<string>('DATABASE_URL');
 
-        if (!databaseUrl) {
-            throw new Error('DATABASE_URL is not configured');
-        }
-
-        this.pool = new Pool({
-            connectionString: databaseUrl,
-        });
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is not configured');
     }
 
-    async onModuleInit(): Promise<void> {
-        try {
-            await this.pool.query('SELECT 1');
-            this.logger.log('PostgreSQL connected successfully');
-        } catch (error) {
-            this.logger.error('PostgreSQL connection failed', error);
-        }
-    }
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+    });
+  }
 
-    async checkConnection(): Promise<boolean> {
-        try {
-            await this.pool.query('SELECT 1');
-            return true;
-        } catch {
-            return false;
-        }
-    }
+  async onModuleInit(): Promise<void> {
+    await this.pool.query('SELECT 1');
 
-    async onModuleDestroy(): Promise<void> {
-        await this.pool.end();
+    this.logger.log('PostgreSQL connected successfully');
+  }
+
+  async checkConnection(): Promise<boolean> {
+    try {
+      await this.pool.query('SELECT 1');
+      return true;
+    } catch {
+      return false;
     }
+  }
+
+  async query<T extends QueryResultRow>(
+    text: string,
+    values: unknown[] = [],
+  ): Promise<QueryResult<T>> {
+    return this.pool.query<T>(text, values);
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.pool.end();
+  }
 }

@@ -4,9 +4,7 @@ import type { HealthResult } from './health.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(
-    private readonly healthService: HealthService,
-  ) { }
+  constructor(private readonly healthService: HealthService) {}
 
   @Get()
   checkHealth(): Promise<HealthResult> {

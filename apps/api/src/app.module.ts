@@ -8,6 +8,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { DatabaseModule } from './database/database.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { UsersModule } from './users/users.module';
+import { InvestigationsModule } from './investigations/investigations.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module';
     OrganizationsModule,
     UsersModule,
     AuthModule,
+    InvestigationsModule,
   ],
   providers: [
     {

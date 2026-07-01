@@ -153,4 +153,31 @@ export class UsersService {
 
     return user;
   }
+
+  async updateStatus(id: string, isActive: boolean): Promise<UserRow> {
+    const result = await this.databaseService.query<UserRow>(
+      `
+        UPDATE users
+        SET is_active = $2
+        WHERE id = $1
+        RETURNING
+          id,
+          organization_id AS "organizationId",
+          email,
+          full_name AS "fullName",
+          role,
+          is_active AS "isActive",
+          created_at AS "createdAt"
+      `,
+      [id, isActive],
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
 }

@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { UsersModule } from './users/users.module';
 import { InvestigationsModule } from './investigations/investigations.module';
+import { CustodyModule } from './custody/custody.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { InvestigationsModule } from './investigations/investigations.module';
     UsersModule,
     AuthModule,
     InvestigationsModule,
+    CustodyModule,
   ],
   providers: [
     {

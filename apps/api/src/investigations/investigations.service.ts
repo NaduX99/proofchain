@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
@@ -16,6 +17,10 @@ interface IdRow {
 interface PostgreSqlError {
   code?: string;
   constraint?: string;
+  message?: string;
+  detail?: string;
+  table?: string;
+  column?: string;
 }
 
 function isPostgreSqlError(error: unknown): error is PostgreSqlError {
@@ -24,6 +29,8 @@ function isPostgreSqlError(error: unknown): error is PostgreSqlError {
 
 @Injectable()
 export class InvestigationsService {
+  private readonly logger = new Logger(InvestigationsService.name);
+
   constructor(private readonly databaseService: DatabaseService) {}
 
   async create(
@@ -75,6 +82,8 @@ export class InvestigationsService {
 
       return this.findOne(organizationId, investigationId);
     } catch (error: unknown) {
+      this.logDatabaseError('Failed to create investigation', error);
+
       if (isPostgreSqlError(error) && error.code === '23505') {
         throw new ConflictException(
           'An investigation with this case code already exists',
@@ -89,7 +98,34 @@ export class InvestigationsService {
     organizationId: string,
     status?: InvestigationStatus,
   ): Promise<InvestigationRow[]> {
-    if (status) {
+    try {
+      if (status) {
+        const result = await this.databaseService.query<InvestigationRow>(
+          `
+              SELECT
+                i.id,
+                i.organization_id AS "organizationId",
+                i.case_code AS "caseCode",
+                i.title,
+                i.description,
+                i.status,
+                i.created_by AS "createdBy",
+                u.full_name AS "createdByName",
+                i.created_at AS "createdAt",
+                i.closed_at AS "closedAt"
+              FROM investigations i
+              LEFT JOIN users u
+                ON u.id = i.created_by
+              WHERE i.organization_id = $1
+                AND i.status = $2::investigation_status
+              ORDER BY i.created_at DESC
+            `,
+          [organizationId, status],
+        );
+
+        return result.rows;
+      }
+
       const result = await this.databaseService.query<InvestigationRow>(
         `
             SELECT
@@ -107,74 +143,63 @@ export class InvestigationsService {
             LEFT JOIN users u
               ON u.id = i.created_by
             WHERE i.organization_id = $1
-              AND i.status = $2::investigation_status
             ORDER BY i.created_at DESC
           `,
-        [organizationId, status],
+        [organizationId],
       );
 
       return result.rows;
+    } catch (error: unknown) {
+      this.logDatabaseError('Failed to retrieve investigations', error);
+
+      throw error;
     }
-
-    const result = await this.databaseService.query<InvestigationRow>(
-      `
-          SELECT
-            i.id,
-            i.organization_id AS "organizationId",
-            i.case_code AS "caseCode",
-            i.title,
-            i.description,
-            i.status,
-            i.created_by AS "createdBy",
-            u.full_name AS "createdByName",
-            i.created_at AS "createdAt",
-            i.closed_at AS "closedAt"
-          FROM investigations i
-          LEFT JOIN users u
-            ON u.id = i.created_by
-          WHERE i.organization_id = $1
-          ORDER BY i.created_at DESC
-        `,
-      [organizationId],
-    );
-
-    return result.rows;
   }
 
   async findOne(
     organizationId: string,
     investigationId: string,
   ): Promise<InvestigationRow> {
-    const result = await this.databaseService.query<InvestigationRow>(
-      `
-          SELECT
-            i.id,
-            i.organization_id AS "organizationId",
-            i.case_code AS "caseCode",
-            i.title,
-            i.description,
-            i.status,
-            i.created_by AS "createdBy",
-            u.full_name AS "createdByName",
-            i.created_at AS "createdAt",
-            i.closed_at AS "closedAt"
-          FROM investigations i
-          LEFT JOIN users u
-            ON u.id = i.created_by
-          WHERE i.id = $1
-            AND i.organization_id = $2
-          LIMIT 1
-        `,
-      [investigationId, organizationId],
-    );
+    try {
+      const result = await this.databaseService.query<InvestigationRow>(
+        `
+            SELECT
+              i.id,
+              i.organization_id AS "organizationId",
+              i.case_code AS "caseCode",
+              i.title,
+              i.description,
+              i.status,
+              i.created_by AS "createdBy",
+              u.full_name AS "createdByName",
+              i.created_at AS "createdAt",
+              i.closed_at AS "closedAt"
+            FROM investigations i
+            LEFT JOIN users u
+              ON u.id = i.created_by
+            WHERE i.id = $1
+              AND i.organization_id = $2
+            LIMIT 1
+          `,
+        [investigationId, organizationId],
+      );
 
-    const investigation = result.rows[0];
+      const investigation = result.rows[0];
 
-    if (!investigation) {
-      throw new NotFoundException('Investigation not found');
+      if (!investigation) {
+        throw new NotFoundException('Investigation not found');
+      }
+
+      return investigation;
+    } catch (error: unknown) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      this.logDatabaseError('Failed to retrieve investigation', error);
+
+      throw error;
     }
-
-    return investigation;
   }
 
   async update(
@@ -182,28 +207,50 @@ export class InvestigationsService {
     investigationId: string,
     dto: UpdateInvestigationDto,
   ): Promise<InvestigationRow> {
-    const title = dto.title?.trim() ?? null;
+    const normalizedTitle = dto.title !== undefined ? dto.title.trim() : null;
 
-    const description = dto.description?.trim() ?? null;
+    const normalizedDescription =
+      dto.description !== undefined ? dto.description.trim() : null;
 
-    const result = await this.databaseService.query<IdRow>(
-      `
-          UPDATE investigations
-          SET
-            title = COALESCE($3, title),
-            description = COALESCE($4, description)
-          WHERE id = $1
-            AND organization_id = $2
-          RETURNING id
-        `,
-      [investigationId, organizationId, title, description],
-    );
+    try {
+      const result = await this.databaseService.query<IdRow>(
+        `
+            UPDATE investigations
+            SET
+              title = COALESCE(
+                $3,
+                title
+              ),
+              description = COALESCE(
+                $4,
+                description
+              )
+            WHERE id = $1
+              AND organization_id = $2
+            RETURNING id
+          `,
+        [
+          investigationId,
+          organizationId,
+          normalizedTitle,
+          normalizedDescription,
+        ],
+      );
 
-    if (!result.rows[0]) {
-      throw new NotFoundException('Investigation not found');
+      if (!result.rows[0]) {
+        throw new NotFoundException('Investigation not found');
+      }
+
+      return this.findOne(organizationId, investigationId);
+    } catch (error: unknown) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      this.logDatabaseError('Failed to update investigation', error);
+
+      throw error;
     }
-
-    return this.findOne(organizationId, investigationId);
   }
 
   async updateStatus(
@@ -211,32 +258,73 @@ export class InvestigationsService {
     investigationId: string,
     status: InvestigationStatus,
   ): Promise<InvestigationRow> {
-    const result = await this.databaseService.query<IdRow>(
-      `
-          UPDATE investigations
-          SET
-            status = $3::investigation_status,
-            closed_at = CASE
-              WHEN $3 = 'CLOSED'
-                THEN COALESCE(closed_at, NOW())
-              WHEN $3 IN (
-                'OPEN',
-                'UNDER_INVESTIGATION'
-              )
-                THEN NULL
-              ELSE closed_at
-            END
-          WHERE id = $1
-            AND organization_id = $2
-          RETURNING id
-        `,
-      [investigationId, organizationId, status],
-    );
+    try {
+      const result = await this.databaseService.query<IdRow>(
+        `
+            UPDATE investigations
+            SET
+              status = $3::investigation_status,
+              closed_at = CASE
+                WHEN $3 = 'CLOSED'
+                  THEN COALESCE(
+                    closed_at,
+                    NOW()
+                  )
 
-    if (!result.rows[0]) {
-      throw new NotFoundException('Investigation not found');
+                WHEN $3 IN (
+                  'OPEN',
+                  'UNDER_INVESTIGATION'
+                )
+                  THEN NULL
+
+                ELSE closed_at
+              END
+            WHERE id = $1
+              AND organization_id = $2
+            RETURNING id
+          `,
+        [investigationId, organizationId, status],
+      );
+
+      if (!result.rows[0]) {
+        throw new NotFoundException('Investigation not found');
+      }
+
+      return this.findOne(organizationId, investigationId);
+    } catch (error: unknown) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      this.logDatabaseError('Failed to update investigation status', error);
+
+      throw error;
+    }
+  }
+
+  private logDatabaseError(operation: string, error: unknown): void {
+    if (isPostgreSqlError(error)) {
+      this.logger.error(
+        [
+          operation,
+          `Code: ${error.code ?? 'unknown'}`,
+          `Table: ${error.table ?? 'unknown'}`,
+          `Column: ${error.column ?? 'unknown'}`,
+          `Constraint: ${error.constraint ?? 'none'}`,
+          `Message: ${error.message ?? 'unknown'}`,
+          `Detail: ${error.detail ?? 'none'}`,
+        ].join(' | '),
+      );
+
+      return;
     }
 
-    return this.findOne(organizationId, investigationId);
+    if (error instanceof Error) {
+      this.logger.error(`${operation}: ${error.message}`, error.stack);
+
+      return;
+    }
+
+    this.logger.error(`${operation}: ${String(error)}`);
   }
 }

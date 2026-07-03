@@ -9,6 +9,8 @@ import { DatabaseModule } from './database/database.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { UsersModule } from './users/users.module';
 import { InvestigationsModule } from './investigations/investigations.module';
+import { EvidenceModule } from './evidence/evidence.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -17,11 +19,13 @@ import { InvestigationsModule } from './investigations/investigations.module';
       envFilePath: '.env',
     }),
     DatabaseModule,
+    StorageModule,
     HealthModule,
     OrganizationsModule,
     UsersModule,
     AuthModule,
     InvestigationsModule,
+    EvidenceModule,
   ],
   providers: [
     {

@@ -38,6 +38,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
+import { AuditAction } from '../audit/decorators/audit-action.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -122,6 +123,7 @@ export class EvidenceController {
 
   @Post('investigations/:investigationId/evidence')
   @Roles(UserRole.ADMIN, UserRole.INVESTIGATOR)
+  @AuditAction('EVIDENCE_REGISTERED')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Register evidence under an investigation',
@@ -231,6 +233,7 @@ export class EvidenceController {
 
   @Post('evidence/:evidenceId/files')
   @Roles(UserRole.ADMIN, UserRole.INVESTIGATOR, UserRole.CUSTODIAN)
+  @AuditAction('EVIDENCE_FILE_UPLOADED')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -335,6 +338,7 @@ export class EvidenceController {
     UserRole.CUSTODIAN,
     UserRole.AUDITOR,
   )
+  @AuditAction('EVIDENCE_FILE_VERIFIED')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify the SHA-256 integrity of an evidence file',
@@ -387,6 +391,7 @@ export class EvidenceController {
     UserRole.CUSTODIAN,
     UserRole.AUDITOR,
   )
+  @AuditAction('EVIDENCE_FILE_DOWNLOADED')
   @ApiOperation({
     summary: 'Securely download an evidence file',
   })

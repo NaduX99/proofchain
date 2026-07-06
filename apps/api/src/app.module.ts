@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
+import { AuditModule } from './audit/audit.module';
+import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
 
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -16,8 +19,8 @@ import { HealthModule } from './health/health.module';
 import { InvestigationsModule } from './investigations/investigations.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { StorageModule } from './storage/storage.module';
-import { UsersModule } from './users/users.module';
 import { TransfersModule } from './transfers/transfers.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -38,6 +41,7 @@ import { TransfersModule } from './transfers/transfers.module';
     CustodyModule,
     EvidenceModule,
     TransfersModule,
+    AuditModule,
   ],
 
   controllers: [AppController],
@@ -53,6 +57,11 @@ import { TransfersModule } from './transfers/transfers.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

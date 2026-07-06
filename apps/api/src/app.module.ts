@@ -22,6 +22,7 @@ import { StorageModule } from './storage/storage.module';
 import { TransfersModule } from './transfers/transfers.module';
 import { UsersModule } from './users/users.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     TransfersModule,
     AuditModule,
     DashboardModule,
+    SearchModule,
   ],
 
   controllers: [AppController],

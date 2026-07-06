@@ -23,6 +23,7 @@ import { TransfersModule } from './transfers/transfers.module';
 import { UsersModule } from './users/users.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { SearchModule } from './search/search.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { SearchModule } from './search/search.module';
     AuditModule,
     DashboardModule,
     SearchModule,
+    ReportsModule,
   ],
 
   controllers: [AppController],

@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.env
+.env.*
+npm-debug.log
+Dockerfile
+.dockerignore
+
+test
+*.spec.ts
+*.e2e-spec.ts
+
+.git
+.gitignore
+README.md

@@ -39,3 +39,6 @@ uploads/
 
 # Prisma or database generated files
 **/generated/
+.env.production
+.env.local
+.env

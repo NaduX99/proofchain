@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: proofchain-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-proofchain}
+      POSTGRES_USER: ${POSTGRES_USER:-proofchain}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-proofchain_prod_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - proofchain_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-proofchain} -d ${POSTGRES_DB:-proofchain}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: proofchain-minio-prod
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-proofchain}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-proofchain_minio_password}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - proofchain_minio_data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mc",
+          "ready",
+          "local"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: proofchain-api-prod
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-proofchain}
+      DB_USER: ${POSTGRES_USER:-proofchain}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-proofchain_prod_password}
+
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-proofchain}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-proofchain_minio_password}
+      MINIO_BUCKET: ${MINIO_BUCKET:-proofchain-evidence}
+
+    ports:
+      - "${API_PORT:-4000}:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+volumes:
+  proofchain_postgres_data:
+  proofchain_minio_data:

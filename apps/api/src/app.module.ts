@@ -21,6 +21,7 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { StorageModule } from './storage/storage.module';
 import { TransfersModule } from './transfers/transfers.module';
 import { UsersModule } from './users/users.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { UsersModule } from './users/users.module';
     EvidenceModule,
     TransfersModule,
     AuditModule,
+    DashboardModule,
   ],
 
   controllers: [AppController],

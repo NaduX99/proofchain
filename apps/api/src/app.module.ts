@@ -17,6 +17,7 @@ import { InvestigationsModule } from './investigations/investigations.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
+import { TransfersModule } from './transfers/transfers.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { UsersModule } from './users/users.module';
     InvestigationsModule,
     CustodyModule,
     EvidenceModule,
+    TransfersModule,
   ],
 
   controllers: [AppController],

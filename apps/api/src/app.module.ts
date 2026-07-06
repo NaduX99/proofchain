@@ -22,29 +22,43 @@ import { StorageModule } from './storage/storage.module';
 import { TransfersModule } from './transfers/transfers.module';
 import { UsersModule } from './users/users.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-
+import { SearchModule } from './search/search.module';
+import { ReportsModule } from './reports/reports.module';
+import {
+  ThrottlerGuard,
+  ThrottlerModule,
+} from '@nestjs/throttler';
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
+ imports: [
+  ConfigModule.forRoot({
+    isGlobal: true,
+    envFilePath: '.env',
+  }),
 
-    DatabaseModule,
-    StorageModule,
-    HealthModule,
+  ThrottlerModule.forRoot([
+    {
+      ttl: 60_000,
+      limit: 100,
+    },
+  ]),
 
-    OrganizationsModule,
-    UsersModule,
-    AuthModule,
+  DatabaseModule,
+  StorageModule,
+  HealthModule,
 
-    InvestigationsModule,
-    CustodyModule,
-    EvidenceModule,
-    TransfersModule,
-    AuditModule,
-    DashboardModule,
-  ],
+  OrganizationsModule,
+  UsersModule,
+  AuthModule,
+
+  InvestigationsModule,
+  CustodyModule,
+  EvidenceModule,
+  TransfersModule,
+  AuditModule,
+  DashboardModule,
+  SearchModule,
+  ReportsModule,
+],
 
   controllers: [AppController],
 

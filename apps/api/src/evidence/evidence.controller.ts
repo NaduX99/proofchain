@@ -52,9 +52,64 @@ import type {
   IntegrityResult,
 } from './evidence.service';
 
-const MAX_EVIDENCE_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+const MAX_EVIDENCE_FILE_SIZE_BYTES =
+  100 * 1024 * 1024;
 
-export class CreateEvidenceDto implements CreateEvidenceInput {
+const BLOCKED_FILE_EXTENSIONS = [
+  '.exe',
+  '.bat',
+  '.cmd',
+  '.ps1',
+  '.sh',
+  '.js',
+  '.vbs',
+  '.scr',
+  '.msi',
+  '.jar',
+  '.com',
+];
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'image/png',
+  'image/jpeg',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'video/mp4',
+];
+
+interface EvidenceUploadFile {
+  originalname: string;
+  mimetype: string;
+  size?: number;
+}
+
+function isAllowedEvidenceFile(
+  file: EvidenceUploadFile,
+): boolean {
+  const originalName =
+    file.originalname.toLowerCase();
+
+  const isBlockedExtension =
+    BLOCKED_FILE_EXTENSIONS.some(
+      (extension) =>
+        originalName.endsWith(extension),
+    );
+
+  if (isBlockedExtension) {
+    return false;
+  }
+
+  return ALLOWED_MIME_TYPES.includes(
+    file.mimetype,
+  );
+}
+
+export class CreateEvidenceDto
+  implements CreateEvidenceInput
+{
   @ApiProperty({
     example: 'EVD-2026-0003',
   })
@@ -72,7 +127,8 @@ export class CreateEvidenceDto implements CreateEvidenceInput {
   title!: string;
 
   @ApiPropertyOptional({
-    example: 'USB device collected from the suspect workstation.',
+    example:
+      'USB device collected from the suspect workstation.',
   })
   @IsOptional()
   @IsString()
@@ -88,14 +144,16 @@ export class CreateEvidenceDto implements CreateEvidenceInput {
   evidenceType!: string;
 
   @ApiPropertyOptional({
-    example: '2026-07-03T10:30:00.000Z',
+    example:
+      '2026-07-03T10:30:00.000Z',
   })
   @IsOptional()
   @IsISO8601()
   collectedAt?: string;
 
   @ApiPropertyOptional({
-    example: 'Digital Forensics Lab 02',
+    example:
+      'Digital Forensics Lab 02',
   })
   @IsOptional()
   @IsString()
@@ -106,10 +164,12 @@ export class CreateEvidenceDto implements CreateEvidenceInput {
 @ApiTags('Evidence')
 @ApiBearerAuth('access-token')
 @ApiUnauthorizedResponse({
-  description: 'Access token is missing or invalid',
+  description:
+    'Access token is missing or invalid',
 })
 @ApiForbiddenResponse({
-  description: 'Your role cannot perform this action',
+  description:
+    'Your role cannot perform this action',
 })
 @Roles(
   UserRole.ADMIN,
@@ -119,27 +179,40 @@ export class CreateEvidenceDto implements CreateEvidenceInput {
 )
 @Controller()
 export class EvidenceController {
-  constructor(private readonly evidenceService: EvidenceService) {}
+  constructor(
+    private readonly evidenceService:
+      EvidenceService,
+  ) {}
 
-  @Post('investigations/:investigationId/evidence')
-  @Roles(UserRole.ADMIN, UserRole.INVESTIGATOR)
+  @Post(
+    'investigations/:investigationId/evidence',
+  )
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.INVESTIGATOR,
+  )
   @AuditAction('EVIDENCE_REGISTERED')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Register evidence under an investigation',
+    summary:
+      'Register evidence under an investigation',
   })
   @ApiParam({
     name: 'investigationId',
     format: 'uuid',
   })
   @ApiCreatedResponse({
-    description: 'Evidence registered successfully',
+    description:
+      'Evidence registered successfully',
   })
   async create(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('investigationId', new ParseUUIDPipe())
+    @Param(
+      'investigationId',
+      new ParseUUIDPipe(),
+    )
     investigationId: string,
 
     @Body()
@@ -149,101 +222,149 @@ export class EvidenceController {
     message: string;
     data: EvidenceItemRow;
   }> {
-    const evidence = await this.evidenceService.create(
-      user.organizationId,
-      investigationId,
-      user.sub,
-      dto,
-    );
+    const evidence =
+      await this.evidenceService.create(
+        user.organizationId,
+        investigationId,
+        user.sub,
+        dto,
+      );
 
     return {
       success: true,
-      message: 'Evidence registered successfully',
+      message:
+        'Evidence registered successfully',
       data: evidence,
     };
   }
 
-  @Get('investigations/:investigationId/evidence')
+  @Get(
+    'investigations/:investigationId/evidence',
+  )
   @ApiOperation({
-    summary: 'Get all evidence under an investigation',
+    summary:
+      'Get all evidence under an investigation',
   })
   @ApiParam({
     name: 'investigationId',
     format: 'uuid',
   })
   @ApiOkResponse({
-    description: 'Evidence retrieved successfully',
+    description:
+      'Evidence retrieved successfully',
   })
   async findAllByInvestigation(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('investigationId', new ParseUUIDPipe())
+    @Param(
+      'investigationId',
+      new ParseUUIDPipe(),
+    )
     investigationId: string,
   ): Promise<{
     success: boolean;
     message: string;
     data: EvidenceItemRow[];
   }> {
-    const evidence = await this.evidenceService.findAllByInvestigation(
-      user.organizationId,
-      investigationId,
-    );
+    const evidence =
+      await this.evidenceService
+        .findAllByInvestigation(
+          user.organizationId,
+          investigationId,
+        );
 
     return {
       success: true,
-      message: 'Evidence retrieved successfully',
+      message:
+        'Evidence retrieved successfully',
       data: evidence,
     };
   }
 
   @Get('evidence/:evidenceId')
   @ApiOperation({
-    summary: 'Get one evidence item',
+    summary:
+      'Get one evidence item',
   })
   @ApiParam({
     name: 'evidenceId',
     format: 'uuid',
   })
   @ApiOkResponse({
-    description: 'Evidence retrieved successfully',
+    description:
+      'Evidence retrieved successfully',
   })
   async findOne(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('evidenceId', new ParseUUIDPipe())
+    @Param(
+      'evidenceId',
+      new ParseUUIDPipe(),
+    )
     evidenceId: string,
   ): Promise<{
     success: boolean;
     message: string;
     data: EvidenceItemRow;
   }> {
-    const evidence = await this.evidenceService.findOne(
-      user.organizationId,
-      evidenceId,
-    );
+    const evidence =
+      await this.evidenceService.findOne(
+        user.organizationId,
+        evidenceId,
+      );
 
     return {
       success: true,
-      message: 'Evidence retrieved successfully',
+      message:
+        'Evidence retrieved successfully',
       data: evidence,
     };
   }
 
-  @Post('evidence/:evidenceId/files')
-  @Roles(UserRole.ADMIN, UserRole.INVESTIGATOR, UserRole.CUSTODIAN)
+  @Post(
+    'evidence/:evidenceId/files',
+  )
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.INVESTIGATOR,
+    UserRole.CUSTODIAN,
+  )
   @AuditAction('EVIDENCE_FILE_UPLOADED')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
-        fileSize: MAX_EVIDENCE_FILE_SIZE_BYTES,
+        fileSize:
+          MAX_EVIDENCE_FILE_SIZE_BYTES,
+        files: 1,
+      },
+      fileFilter: (
+        _request,
+        file,
+        callback,
+      ) => {
+        if (
+          !isAllowedEvidenceFile(file)
+        ) {
+          callback(
+            new BadRequestException(
+              'File type is not allowed. Allowed files: PDF, TXT, PNG, JPG, DOCX, ZIP, MP4.',
+            ),
+            false,
+          );
+
+          return;
+        }
+
+        callback(null, true);
       },
     }),
   )
   @ApiOperation({
-    summary: 'Upload a file for an evidence item',
+    summary:
+      'Upload a file for an evidence item',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -263,75 +384,111 @@ export class EvidenceController {
     format: 'uuid',
   })
   @ApiCreatedResponse({
-    description: 'Evidence file uploaded successfully',
+    description:
+      'Evidence file uploaded successfully',
   })
   async uploadFile(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('evidenceId', new ParseUUIDPipe())
+    @Param(
+      'evidenceId',
+      new ParseUUIDPipe(),
+    )
     evidenceId: string,
 
     @UploadedFile()
-    file: Express.Multer.File | undefined,
+    file:
+      | Express.Multer.File
+      | undefined,
   ): Promise<{
     success: boolean;
     message: string;
     data: EvidenceFileRow;
   }> {
     if (!file) {
-      throw new BadRequestException('An evidence file is required');
+      throw new BadRequestException(
+        'An evidence file is required',
+      );
     }
 
-    const evidenceFile = await this.evidenceService.uploadFile(
-      user.organizationId,
-      evidenceId,
-      user.sub,
-      file,
-    );
+    if (!isAllowedEvidenceFile(file)) {
+      throw new BadRequestException(
+        'File type is not allowed. Allowed files: PDF, TXT, PNG, JPG, DOCX, ZIP, MP4.',
+      );
+    }
+
+    if (
+      file.size >
+      MAX_EVIDENCE_FILE_SIZE_BYTES
+    ) {
+      throw new BadRequestException(
+        'Evidence file size cannot exceed 100MB',
+      );
+    }
+
+    const evidenceFile =
+      await this.evidenceService.uploadFile(
+        user.organizationId,
+        evidenceId,
+        user.sub,
+        file,
+      );
 
     return {
       success: true,
-      message: 'Evidence file uploaded successfully',
+      message:
+        'Evidence file uploaded successfully',
       data: evidenceFile,
     };
   }
 
-  @Get('evidence/:evidenceId/files')
+  @Get(
+    'evidence/:evidenceId/files',
+  )
   @ApiOperation({
-    summary: 'Get files uploaded for an evidence item',
+    summary:
+      'Get files uploaded for an evidence item',
   })
   @ApiParam({
     name: 'evidenceId',
     format: 'uuid',
   })
   @ApiOkResponse({
-    description: 'Evidence files retrieved successfully',
+    description:
+      'Evidence files retrieved successfully',
   })
   async findFiles(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('evidenceId', new ParseUUIDPipe())
+    @Param(
+      'evidenceId',
+      new ParseUUIDPipe(),
+    )
     evidenceId: string,
   ): Promise<{
     success: boolean;
     message: string;
     data: EvidenceFileRow[];
   }> {
-    const files = await this.evidenceService.findFiles(
-      user.organizationId,
-      evidenceId,
-    );
+    const files =
+      await this.evidenceService.findFiles(
+        user.organizationId,
+        evidenceId,
+      );
 
     return {
       success: true,
-      message: 'Evidence files retrieved successfully',
+      message:
+        'Evidence files retrieved successfully',
       data: files,
     };
   }
 
-  @Post('evidence/:evidenceId/files/:fileId/verify')
+  @Post(
+    'evidence/:evidenceId/files/:fileId/verify',
+  )
   @Roles(
     UserRole.ADMIN,
     UserRole.INVESTIGATOR,
@@ -341,7 +498,8 @@ export class EvidenceController {
   @AuditAction('EVIDENCE_FILE_VERIFIED')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Verify the SHA-256 integrity of an evidence file',
+    summary:
+      'Verify the SHA-256 integrity of an evidence file',
   })
   @ApiParam({
     name: 'evidenceId',
@@ -352,28 +510,36 @@ export class EvidenceController {
     format: 'uuid',
   })
   @ApiOkResponse({
-    description: 'Evidence integrity verification completed',
+    description:
+      'Evidence integrity verification completed',
   })
   async verifyFile(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('evidenceId', new ParseUUIDPipe())
+    @Param(
+      'evidenceId',
+      new ParseUUIDPipe(),
+    )
     evidenceId: string,
 
-    @Param('fileId', new ParseUUIDPipe())
+    @Param(
+      'fileId',
+      new ParseUUIDPipe(),
+    )
     fileId: string,
   ): Promise<{
     success: boolean;
     message: string;
     data: IntegrityResult;
   }> {
-    const result = await this.evidenceService.verifyFile(
-      user.organizationId,
-      evidenceId,
-      fileId,
-      user.sub,
-    );
+    const result =
+      await this.evidenceService.verifyFile(
+        user.organizationId,
+        evidenceId,
+        fileId,
+        user.sub,
+      );
 
     return {
       success: true,
@@ -384,7 +550,9 @@ export class EvidenceController {
     };
   }
 
-  @Get('evidence/:evidenceId/files/:fileId/download')
+  @Get(
+    'evidence/:evidenceId/files/:fileId/download',
+  )
   @Roles(
     UserRole.ADMIN,
     UserRole.INVESTIGATOR,
@@ -393,7 +561,8 @@ export class EvidenceController {
   )
   @AuditAction('EVIDENCE_FILE_DOWNLOADED')
   @ApiOperation({
-    summary: 'Securely download an evidence file',
+    summary:
+      'Securely download an evidence file',
   })
   @ApiParam({
     name: 'evidenceId',
@@ -405,16 +574,23 @@ export class EvidenceController {
   })
   @ApiProduces('application/octet-stream')
   @ApiOkResponse({
-    description: 'Evidence file downloaded successfully',
+    description:
+      'Evidence file downloaded successfully',
   })
   async downloadFile(
     @CurrentUser()
     user: JwtPayload,
 
-    @Param('evidenceId', new ParseUUIDPipe())
+    @Param(
+      'evidenceId',
+      new ParseUUIDPipe(),
+    )
     evidenceId: string,
 
-    @Param('fileId', new ParseUUIDPipe())
+    @Param(
+      'fileId',
+      new ParseUUIDPipe(),
+    )
     fileId: string,
 
     @Res({
@@ -422,18 +598,23 @@ export class EvidenceController {
     })
     response: Response,
   ): Promise<StreamableFile> {
-    const result = await this.evidenceService.downloadFile(
-      user.organizationId,
-      evidenceId,
-      fileId,
-      user.sub,
-    );
+    const result =
+      await this.evidenceService.downloadFile(
+        user.organizationId,
+        evidenceId,
+        fileId,
+        user.sub,
+      );
 
-    const encodedFilename = encodeURIComponent(result.file.originalFilename);
+    const encodedFilename =
+      encodeURIComponent(
+        result.file.originalFilename,
+      );
 
     response.setHeader(
       'Content-Type',
-      result.file.mimeType || 'application/octet-stream',
+      result.file.mimeType ||
+        'application/octet-stream',
     );
 
     response.setHeader(
@@ -441,8 +622,13 @@ export class EvidenceController {
       `attachment; filename*=UTF-8''${encodedFilename}`,
     );
 
-    response.setHeader('Content-Length', String(result.file.sizeBytes));
+    response.setHeader(
+      'Content-Length',
+      String(result.file.sizeBytes),
+    );
 
-    return new StreamableFile(result.stream);
+    return new StreamableFile(
+      result.stream,
+    );
   }
 }

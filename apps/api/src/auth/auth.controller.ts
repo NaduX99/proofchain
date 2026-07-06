@@ -13,7 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { AuthService } from './auth.service';
-
+import { Throttle } from '@nestjs/throttler';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
@@ -21,6 +21,12 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @Throttle({
+  default: {
+    limit: 5,
+    ttl: 60_000,
+  },
+})
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Log in to ProofChain',

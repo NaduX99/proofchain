@@ -1,0 +1,6 @@
+export enum InvestigationStatus {
+  OPEN = 'OPEN',
+  UNDER_INVESTIGATION = 'UNDER_INVESTIGATION',
+  CLOSED = 'CLOSED',
+  ARCHIVED = 'ARCHIVED',
+}

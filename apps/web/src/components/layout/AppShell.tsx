@@ -4,41 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const menuItems = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-  },
-  {
-    name: "Investigations",
-    href: "/investigations",
-  },
-  {
-    name: "Evidence",
-    href: "/evidence",
-  },
-  {
-    name: "Custody Chain",
-    href: "/custody",
-  },
-  {
-    name: "Transfers",
-    href: "/transfers",
-  },
-  {
-    name: "Audit Logs",
-    href: "/audit-logs",
-  },
-  {
-    name: "Reports",
-    href: "/reports",
-  },
+  { name: "Dashboard", href: "/dashboard" },
+  { name: "Investigations", href: "/investigations" },
+  { name: "Evidence", href: "/evidence" },
+  { name: "Evidence Files", href: "/evidence-files" },
+  { name: "Custody Chain", href: "/custody" },
+  { name: "Transfers", href: "/transfers" },
+  { name: "Audit Logs", href: "/audit-logs" },
+  { name: "Reports", href: "/reports" },
 ];
 
-export default function AppShell({
-  children,
-}: {
+type AppShellProps = {
   children: React.ReactNode;
-}) {
+};
+
+export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
 
